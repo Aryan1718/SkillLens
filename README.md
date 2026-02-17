@@ -13,8 +13,8 @@ docker compose up --build
 ```
 
 Open:
-- Client: http://localhost:5173
-- Server docs: http://localhost:8000/docs
+- Client: http://localhost:5175
+- Server docs: http://localhost:8007/docs
 
 ## Database Migrations (Supabase)
 
