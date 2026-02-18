@@ -1,18 +1,44 @@
-import { useState } from 'react'
-import { Home } from './pages/Home'
-import { Report } from './pages/Report'
-import type { AnalyzeResponse } from './types'
+/*
+ Run:
+  npm install
+  npm run dev
+*/
+
+import { useEffect } from 'react'
+import { Footer } from './components/layout/Footer'
+import { Navbar } from './components/layout/Navbar'
+import { BackgroundBeams } from './components/ui/BackgroundBeams'
+import { useCurrentPath, useSkillParams, navigate } from './lib/router'
+import { LandingPage } from './pages/LandingPage'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { SkillDetailPage } from './pages/SkillDetailPage'
+import { SkillsDirectoryPage } from './pages/SkillsDirectoryPage'
 
 export function App() {
-  const [report, setReport] = useState<AnalyzeResponse | null>(null)
+  const path = useCurrentPath()
+
+  useEffect(() => {
+    if (path === '/home') {
+      navigate('/', true)
+    }
+  }, [path])
+
+  const isSkillDetail = Boolean(useSkillParams(path))
+
+  let page = <NotFoundPage />
+  if (path === '/') {
+    page = <LandingPage />
+  } else if (path === '/skills') {
+    page = <SkillsDirectoryPage />
+  } else if (isSkillDetail) {
+    page = <SkillDetailPage />
+  }
 
   return (
-    <main style={{ maxWidth: 900, margin: '0 auto', padding: 16 }}>
-      {report ? (
-        <Report report={report} onBack={() => setReport(null)} />
-      ) : (
-        <Home onAnalyzed={setReport} />
-      )}
-    </main>
+    <BackgroundBeams>
+      <Navbar />
+      <main className="container site-main">{page}</main>
+      <Footer />
+    </BackgroundBeams>
   )
 }
