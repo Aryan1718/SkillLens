@@ -185,6 +185,54 @@ def _extract_skill_md_rendered(all_lines: list[str]) -> str:
     return joined
 
 
+def _extract_installed_on_from_dom(soup: BeautifulSoup, page_url: str) -> dict[str, int]:
+    installed_on: dict[str, int] = {}
+    heading_node = soup.find(
+        lambda tag: tag and tag.get_text(" ", strip=True).lower() == "installed on"
+    )
+    if not heading_node:
+        return installed_on
+
+    section_container = heading_node.parent
+    if not section_container:
+        return installed_on
+
+    # Most pages render one row per platform with two spans: platform + count.
+    rows = section_container.select("div.flex.items-center.justify-between")
+    if rows:
+        for row in rows:
+            spans = row.find_all("span")
+            if len(spans) < 2:
+                continue
+            platform = spans[0].get_text(" ", strip=True).lower()
+            count_text = spans[-1].get_text(" ", strip=True)
+            if not platform or not count_text:
+                continue
+            try:
+                installed_on[platform] = parse_count(count_text)
+            except ValueError:
+                continue
+        if installed_on:
+            return installed_on
+
+    # Generic fallback: find likely "platform + count" pairs in sibling text.
+    for sibling in section_container.find_all_next(limit=120):
+        text = sibling.get_text(" ", strip=True)
+        if not text:
+            continue
+        if text in STOP_HEADERS:
+            break
+        match = re.match(r"^(.*\S)\s+([0-9][0-9,]*(?:\.[0-9]+)?[KMBkmb]?)$", text)
+        if not match:
+            continue
+        platform = match.group(1).strip().lower()
+        try:
+            installed_on[platform] = parse_count(match.group(2))
+        except ValueError:
+            continue
+    return installed_on
+
+
 def parse_skill_page(page_url: str, html: str, now: datetime | None = None) -> dict[str, Any]:
     """Pure parser for one skill page HTML."""
     owner, repo, skill_slug = parse_path_parts(page_url)
@@ -220,14 +268,32 @@ def parse_skill_page(page_url: str, html: str, now: datetime | None = None) -> d
     first_seen_raw = first_seen_lines[0] if first_seen_lines else ""
     first_seen_date = parse_first_seen_date(first_seen_raw, now=now) if first_seen_raw else ""
 
-    installed_on: dict[str, int] = {}
-    installed_lines = _section_value_lines(normalized_lines, "Installed on")
-    for raw_line in installed_lines:
-        match = re.match(r"^(.*\S)\s+([0-9][0-9,]*(?:\.[0-9]+)?[KMBkmb]?)$", raw_line)
-        if not match:
-            continue
-        platform = match.group(1).strip().lower()
-        installed_on[platform] = parse_count(match.group(2))
+    installed_on = _extract_installed_on_from_dom(soup, page_url)
+    if not installed_on:
+        installed_lines = _section_value_lines(normalized_lines, "Installed on")
+        idx = 0
+        # Handles both "platform 3.4K" on one line and split-line pairs:
+        #   platform
+        #   3.4K
+        while idx < len(installed_lines):
+            raw_line = installed_lines[idx]
+            single_line = re.match(
+                r"^(.*\S)\s+([0-9][0-9,]*(?:\.[0-9]+)?[KMBkmb]?)$", raw_line
+            )
+            if single_line:
+                platform = single_line.group(1).strip().lower()
+                installed_on[platform] = parse_count(single_line.group(2))
+                idx += 1
+                continue
+
+            if idx + 1 < len(installed_lines):
+                maybe_platform = installed_lines[idx].strip().lower()
+                maybe_count = installed_lines[idx + 1].strip()
+                if maybe_platform and COUNT_RE.match(maybe_count):
+                    installed_on[maybe_platform] = parse_count(maybe_count)
+                    idx += 2
+                    continue
+            idx += 1
 
     extracted_links = absolute_links_from_html(page_url, soup)
     deterministic_id = str(uuid.uuid5(uuid.NAMESPACE_URL, page_url))
