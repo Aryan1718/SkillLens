@@ -30,6 +30,7 @@ dist/
 # Scraper output
 data/skills/
 data/state.json
+data/github/
 
 # Generated frontend skill cache/assets
 client/public/skills/
