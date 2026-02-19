@@ -45,3 +45,12 @@ def test_parse_skill_page_no_skill_md_fixture() -> None:
     assert record["first_seen_date"] == "2026-02-01"
     assert record["installed_on"] == {}
 
+
+def test_parse_skill_page_installed_on_split_lines_fixture() -> None:
+    html = (FIXTURES / "skills_sh_installed_on_split_lines.html").read_text(
+        encoding="utf-8"
+    )
+    page_url = "https://skills.sh/owner/repo/demo"
+    record = parse_skill_page(page_url, html)
+
+    assert record["installed_on"] == {"gemini-cli": 4200, "codex": 3600}
