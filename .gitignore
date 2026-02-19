@@ -17,6 +17,7 @@ venv/
 node_modules/
 dist/
 .vite/
+*.tsbuildinfo
 
 # OS / editor
 .DS_Store
@@ -29,3 +30,6 @@ dist/
 # Scraper output
 data/skills/
 data/state.json
+
+# Generated frontend skill cache/assets
+client/public/skills/
