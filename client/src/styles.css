@@ -296,6 +296,18 @@ a:hover {
   padding: 0.9rem;
 }
 
+.report-security-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 2fr 1fr;
+}
+
+@media (max-width: 900px) {
+  .report-security-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .section-head {
   display: flex;
   justify-content: space-between;

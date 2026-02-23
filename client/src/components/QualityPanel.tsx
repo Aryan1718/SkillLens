@@ -1,7 +1,7 @@
 import { formatJson } from '../lib/utils'
 
 interface QualityPanelProps {
-  data: Record<string, unknown>
+  data: Record<string, unknown> | null
 }
 
 export function QualityPanel({ data }: QualityPanelProps) {

@@ -33,6 +33,7 @@ export type InstalledOn = Record<string, number>
 
 export interface SkillSummary {
   id: string
+  name?: string | null
   source: string
   owner: string
   repo: string
@@ -41,6 +42,8 @@ export interface SkillSummary {
   repository_url: string
   install_command: string
   weekly_installs: number
+  trust_badge?: string | null
+  overall_score?: number | null
   first_seen_date: string
   installed_on: InstalledOn
   scraped_at: string
@@ -68,6 +71,72 @@ export interface SkillRecord {
   parse_version: string
   scraped_at: string
   last_seen_at: string
+}
+
+export interface AnalysisSummary {
+  overall_score: number | null
+  trust_badge: string | null
+  security: Record<string, unknown> | null
+  quality: Record<string, unknown> | null
+  behavior: Record<string, unknown> | null
+  dependencies: Record<string, unknown> | null
+  analyzed_at: string | null
+}
+
+export interface SecurityFinding {
+  id: string
+  category: string
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  title: string
+  evidence: string
+  file_path: string
+  line_start: number | null
+  line_end: number | null
+  confidence: 'low' | 'medium' | 'high'
+}
+
+export interface UserSecurityExplanation {
+  headline?: string
+  summary?: string
+  top_concerns?: string[]
+  recommended_actions?: string[]
+  safety_checks?: Array<{
+    key: string
+    safe: boolean
+    safe_message: string
+    risk_message: string
+  }>
+  safety_statements?: string[]
+}
+
+export interface SecurityData {
+  findings?: SecurityFinding[]
+  validated_findings?: Array<Record<string, unknown>>
+  security_summary?: string | null
+  user_explanation?: UserSecurityExplanation
+  risk_score?: number
+  trust_badge?: string
+  capabilities?: Record<string, boolean>
+  llm_used?: boolean
+  llm_model?: string | null
+  analyzed_at?: string
+}
+
+export interface SkillDetail {
+  id: string
+  name: string
+  owner: string
+  repo: string
+  skill_slug: string
+  page_url: string
+  repository_url: string
+  install_command: string
+  weekly_installs: number
+  skill_md_rendered: string
+  extracted_links: string[]
+  scraped_at: string | null
+  last_seen_at: string | null
+  analysis: AnalysisSummary
 }
 
 export type SkillSort = 'weekly_desc' | 'az' | 'recent'

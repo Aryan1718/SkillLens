@@ -4,6 +4,7 @@ set -euo pipefail
 # Usage:
 #   SUPABASE_DB_URL='postgresql://...' ./scripts/db_apply.sh
 #   SUPABASE_DB_URL='postgresql://...' ./scripts/db_apply.sh supabase/migrations/20260216170000_init_skilllens.sql
+#   SUPABASE_DB_URL='postgresql://...' ./scripts/db_apply.sh database/02_artifacts_and_jobs.sql
 
 # Load repo .env automatically if present.
 if [[ -f ".env" ]]; then
@@ -42,15 +43,18 @@ if [[ $# -gt 0 ]]; then
 fi
 
 shopt -s nullglob
-migration_files=(supabase/migrations/*.sql)
+migration_files=(supabase/migrations/*.sql database/*.sql)
 shopt -u nullglob
 
 if [[ ${#migration_files[@]} -eq 0 ]]; then
-  echo "No migrations found in supabase/migrations/." >&2
+  echo "No migrations found in supabase/migrations/ or database/." >&2
   exit 1
 fi
 
-for file in "${migration_files[@]}"; do
+IFS=$'\n' sorted_files=($(printf '%s\n' "${migration_files[@]}" | sort))
+unset IFS
+
+for file in "${sorted_files[@]}"; do
   apply_file "$file"
 done
 

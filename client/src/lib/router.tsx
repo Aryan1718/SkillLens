@@ -7,6 +7,10 @@ export interface SkillRouteParams {
   skillSlug: string
 }
 
+export interface SkillIdRouteParams {
+  id: string
+}
+
 function cleanPath(path: string): string {
   if (!path) return '/'
   const next = path.startsWith('/') ? path : `/${path}`
@@ -48,6 +52,18 @@ export function useSkillParams(path: string): SkillRouteParams | null {
       owner: decodeURIComponent(matched[1]),
       repo: decodeURIComponent(matched[2]),
       skillSlug: decodeURIComponent(matched[3]),
+    }
+  }, [path])
+}
+
+export function useSkillIdParam(path: string): SkillIdRouteParams | null {
+  return useMemo(() => {
+    const matched = path.match(/^\/skills\/([^/]+)$/)
+    if (!matched) {
+      return null
+    }
+    return {
+      id: decodeURIComponent(matched[1]),
     }
   }, [path])
 }

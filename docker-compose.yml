@@ -10,6 +10,11 @@ services:
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
   client:
@@ -26,3 +31,22 @@ services:
     depends_on:
       - server
     command: npm run dev -- --host 0.0.0.0 --port 5173
+
+  security-runner:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    profiles: ["manual"]
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/workspace
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    command: python3 -m server.workers.job_runner --enqueue-first
