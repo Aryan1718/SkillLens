@@ -3,13 +3,62 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import os
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from threading import Lock
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dotenv import load_dotenv
-from supabase import Client, create_client
+
+def _load_create_client() -> tuple[Any | None, Exception | None]:
+    try:
+        module = importlib.import_module("supabase")
+        factory = getattr(module, "create_client", None)
+        if callable(factory):
+            return factory, None
+        raise ImportError("`supabase.create_client` was not found.")
+    except Exception as primary_exc:  # noqa: BLE001
+        # Fallback for local `supabase/` folder shadowing the installed package.
+        original_path = list(sys.path)
+        previous_module = sys.modules.pop("supabase", None)
+        repo_root = Path(__file__).resolve().parents[2]
+        cwd = Path.cwd().resolve()
+        imported_ok = False
+
+        try:
+            filtered_path: list[str] = []
+            for entry in original_path:
+                if not entry:
+                    continue
+                resolved = Path(entry).resolve()
+                if resolved in {repo_root, cwd}:
+                    continue
+                filtered_path.append(entry)
+            sys.path = filtered_path
+
+            module = importlib.import_module("supabase")
+            factory = getattr(module, "create_client", None)
+            if callable(factory):
+                imported_ok = True
+                return factory, None
+            raise ImportError("`supabase.create_client` was not found after fallback import.")
+        except Exception as fallback_exc:  # noqa: BLE001
+            return None, fallback_exc
+        finally:
+            sys.path = original_path
+            if not imported_ok and previous_module is not None:
+                sys.modules["supabase"] = previous_module
+
+
+create_client, _SUPABASE_IMPORT_ERROR = _load_create_client()
+
+if TYPE_CHECKING:
+    from supabase import Client
+else:
+    Client = Any
 
 load_dotenv()
 
@@ -29,6 +78,12 @@ def get_supabase() -> Client:
             key = os.getenv("SUPABASE_KEY")
             if not url or not key:
                 raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set")
+            if create_client is None:
+                raise RuntimeError(
+                    "Supabase Python client is not available. Install server dependencies "
+                    "with `python3 -m pip install -r server/requirements.txt`. "
+                    f"Original import error: {_SUPABASE_IMPORT_ERROR}"
+                )
             _client = create_client(url, key)
     return _client
 

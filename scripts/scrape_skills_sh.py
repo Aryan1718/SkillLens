@@ -37,6 +37,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=None, help="Random seed for deterministic sampling.")
     parser.add_argument("--dry-run", action="store_true", help="Parse changes without writing files.")
     parser.add_argument(
+        "--db-write",
+        dest="db_write",
+        action="store_true",
+        default=True,
+        help="Upsert scraped records into the skills table (default: true).",
+    )
+    parser.add_argument(
+        "--no-db-write",
+        dest="db_write",
+        action="store_false",
+        help="Disable upserting scraped records into the skills table.",
+    )
+    parser.add_argument(
         "--print",
         dest="do_print",
         action="store_true",
@@ -76,6 +89,7 @@ async def run() -> int:
         seed=args.seed,
         dry_run=args.dry_run,
         print_jsonl=args.do_print,
+        write_db=args.db_write,
     )
     print(json.dumps({"summary": summary}, ensure_ascii=False))
     return 0 if summary["failed"] == 0 else 1

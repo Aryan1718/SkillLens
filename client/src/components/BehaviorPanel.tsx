@@ -1,7 +1,7 @@
 import { formatJson } from '../lib/utils'
 
 interface BehaviorPanelProps {
-  data: Record<string, unknown>
+  data: Record<string, unknown> | null
 }
 
 export function BehaviorPanel({ data }: BehaviorPanelProps) {

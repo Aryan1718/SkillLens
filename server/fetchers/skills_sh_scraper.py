@@ -19,6 +19,8 @@ import httpx
 from bs4 import BeautifulSoup
 from xml.etree import ElementTree as ET
 
+from server.core.cache import upsert_skill
+
 LOGGER = logging.getLogger(__name__)
 
 SOURCE_NAME = "skills.sh"
@@ -608,6 +610,7 @@ class SkillsShScraper:
         seed: int | None = None,
         dry_run: bool = False,
         print_jsonl: bool = True,
+        write_db: bool = True,
     ) -> dict[str, Any]:
         if include_all and count is not None:
             raise ValueError("Use either --all or --count, not both.")
@@ -639,6 +642,8 @@ class SkillsShScraper:
             "new": 0,
             "updated": 0,
             "unchanged": 0,
+            "db_upserted": 0,
+            "db_failed": 0,
             "failed": 0,
             "errors": [],
         }
@@ -706,6 +711,23 @@ class SkillsShScraper:
                         path.write_text(
                             json.dumps(record, indent=2, ensure_ascii=False), encoding="utf-8"
                         )
+
+                if not dry_run and write_db:
+                    db_record = {
+                        **record,
+                        # Compatibility with initial schema NOT NULL constraints.
+                        "name": record["skill_slug"],
+                        "skill_content": record["skill_md_rendered"],
+                        "last_fetched": record["scraped_at"],
+                    }
+                    try:
+                        await upsert_skill(db_record)
+                        summary["db_upserted"] += 1
+                    except Exception as exc:  # noqa: BLE001
+                        summary["db_failed"] += 1
+                        summary["failed"] += 1
+                        summary["errors"].append({"page_url": page_url, "error": str(exc)})
+                        LOGGER.error("Failed DB upsert for %s: %s", page_url, exc)
 
         if not dry_run:
             save_state(self.state_path, state)
